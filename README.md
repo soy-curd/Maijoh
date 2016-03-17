@@ -1,5 +1,13 @@
 # Maijoh
 
+## Download Kakuyomu text
+
+```python
+import download
+kakuyomu = download.Kakuyomu()
+novels = kakuyomu.get_novel_link("ほげ")
+```
+
 ## setup(for Mac OS)
 
 ```
