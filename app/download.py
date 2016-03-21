@@ -153,22 +153,20 @@ class Aozora(NovelSite):
         soup = BeautifulSoup(text)
         title = soup.find('h1', {'class': 'title'}).text
         author = soup.find('h2', {'class': 'author'}).text
-        tag = soup.div
+        body = soup.find('div', {'class': 'main_text'})
 
         # ここでルビをreplaceする必要がある。
         try:
-            while soup.ruby:
-                tag.ruby.replace_with(tag.ruby.rb.string)
-            while soup.br:
+            while body.ruby:
+                body.ruby.replace_with(body.ruby.rb.string)
+            while body.br:
                 soup.br.decompose()
-            while soup.strong:
-                soup.strong.decompose()
+            while body.strong:
+                body.strong.decompose()
         except AttributeError:
             pass
 
-        _text = tag.text
-
-        return _text, title, author
+        return body.text, title, author
 
 
 def wakati(text):
@@ -189,9 +187,9 @@ def main():
 
     aozora = Aozora()
     # 安吾、乱歩、信夫、久作
-    authores = [1095, 1779, 933, 96]
+    authors = [1095, 1779, 933, 96]
     novels = []
-    for author in authores:
+    for author in authors:
         novels += aozora.get_novel(author)
 
     # データ挿入
