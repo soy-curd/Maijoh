@@ -3,6 +3,7 @@
 ## Download Kakuyomu text
 
 ```python
+# ほげタグの小説を検索
 import download
 kakuyomu = download.Kakuyomu()
 novels = kakuyomu.get_novel_link("ほげ")
