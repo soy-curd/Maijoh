@@ -102,6 +102,12 @@ def main():
 
     keep = tf.placeholder(tf.float32)
 
+    """
+    saver.restore(sess, "checkpoints/model-last")
+    sess.run([predict_y], feed_dict={x_ph: random_test_x[0]})
+    で行ける気がするが、型が合わない。謎。
+    """
+
 
 if __name__ == '__main__':
     main()
