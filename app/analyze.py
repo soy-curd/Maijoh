@@ -1,12 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from download import Novel
 from constants import *
 import numpy as np
 from pymongo import MongoClient
 from collections import Counter
 import itertools
+import os
+import tensorflow as tf
+import random
+from datetime import datetime
+import sys
+
+if not os.path.exists(CHECKPOINTS_DIR):
+    os.makedirs(CHECKPOINTS_DIR)
+
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
 
 
 def one_hot_vec(index):
@@ -36,10 +46,7 @@ def make_data():
 
     contents = padding(contents, max([len(c) for c in contents]))
     _labels = [novel["label"] for novel in novels]
-    print(_labels)
     labels = [one_hot_vec(l) for l in _labels]
-    if novels[0]["vector"]:
-        return labels, [novel["vector"] for novel in novels]
 
     # 単語カウント
     ctr = Counter(itertools.chain(*contents))
@@ -47,6 +54,9 @@ def make_data():
     # [('a', 1), ...] -> ['a', ...]
     dictionaries = [c[0] for c in ctr.most_common()]
     dictionaries_inv = {c: i for i, c in enumerate(dictionaries)}
+
+    if novels[0]["vector"]:
+        return [novel["vector"] for novel in novels], labels, dictionaries
 
     # 各テキスト毎の単語ベクトル
     # [[ 3, 51, 34, 9, ...], ...]
@@ -56,13 +66,41 @@ def make_data():
         _id = novel["_id"]
         vector = [dictionaries_inv[word] for word in content]
         c.update({'_id': _id}, {'$set': {'vector': vector}})
+    print(data, labels, dictionaries)
+    return data, labels, dictionaries
 
-    return labels, data
+
+def get_data():
+    if os.path.exists(DATA_FILE) and os.path.exists(LABEL_FILE) and os.path.exists(DICTIONARY_FILE):
+        data = np.load(DATA_FILE)
+        labels = np.load(LABEL_FILE)
+        dictionaries = np.load(DICTIONARY_FILE)
+    else:
+        data, labels, dictionaries = make_data()
+        data = np.array(data)
+        labels = np.array(labels)
+        dictionaries = np.array(dictionaries)
+
+        np.save(DATA_FILE, data)
+        np.save(LABEL_FILE, labels)
+        np.save(DICTIONARY_FILE, dictionaries)
+
+    return data, labels, dictionaries
+
+
+def log(content):
+    time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    print(time + ': ' + content)
+    sys.stdout.flush()
 
 
 def main():
-    labels, data = make_data()
-    print(labels)
+    x, y, d = get_data()
+    data = random.shuffle(zip(x, y))
+    train_data = data[:NUM_TESTS]
+    test_data = data[NUM_TESTS:]
+
+    keep = tf.placeholder(tf.float32)
 
 
 if __name__ == '__main__':

@@ -221,8 +221,6 @@ def main():
     cursor = c.find()
     for novel in cursor:
         _id = novel["_id"]
-        print(novel["author"])
-        print(AUTHOR_CLASS)
         class_num = AUTHOR_CLASS[novel["author"]]
         c.update({'_id': _id}, {'$set': {'label': class_num}})
 

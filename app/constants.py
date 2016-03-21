@@ -20,7 +20,7 @@ for i, author in enumerate(AUTHORS):
 
 AUTHOR_CLASS = {author.name: author.class_num for author in AUTHORS}
 
-NUM_TESTS = 2000
+NUM_TESTS = 20
 NUM_CLASSES = len(AUTHORS)
 NUM_EPOCHS = 10
 NUM_MINI_BATCH = 64
@@ -34,6 +34,7 @@ CHECKPOINTS_EVERY = 1000
 SUMMARY_LOG_DIR = 'summary_log'
 CHECKPOINTS_DIR = 'checkpoints'
 
+DATA_DIR = 'data'
 RAW_FILE = 'data/raw.txt'
 DATA_FILE = 'data/data.npy'
 LABEL_FILE = 'data/labels.npy'
