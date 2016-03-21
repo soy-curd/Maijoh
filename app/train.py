@@ -9,7 +9,11 @@ from constants import *
 import random
 
 
-def main():
+def cnn():
+    """
+    https://github.com/tkengo/tf/tree/master/cnn_text_classification
+    を改変。
+    """
     if not os.path.exists(CHECKPOINTS_DIR):
         os.makedirs(CHECKPOINTS_DIR)
 
@@ -37,9 +41,10 @@ def main():
 
     # Define 2nd layer (Word embedding layer).
     with tf.name_scope('embedding'):
+        # 更新対象の変数はVariableに入れる
         w = tf.Variable(tf.random_uniform([len(d), EMBEDDING_SIZE], -1.0, 1.0), name='weight')
         e = tf.nn.embedding_lookup(w, input_x)
-        ex = tf.expand_dims(e, -1)
+        ex = tf.expand_dims(e, -1)  # 次元変更
 
     # Define 3rd and 4th layer (Temporal 1-D convolutional and max-pooling layer).
     p_array = []
@@ -67,6 +72,7 @@ def main():
     # Create optimizer.
     # ----------------------------------------------------------
     # Use cross entropy for softmax as a cost function.
+    # コスト関数の定義
     xentropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(predict_y, input_y))
 
     # Add L2 regularization term in order to avoid overfitting.
@@ -154,6 +160,10 @@ def main():
 
         # Save the model before the program is finished.
         saver.save(sess, CHECKPOINTS_DIR + '/model-last')
+
+
+def main():
+    cnn()
 
 
 if __name__ == '__main__':
