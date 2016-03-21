@@ -10,6 +10,7 @@ from urllib.parse import quote, urljoin
 import igo
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
+from constants import *
 
 
 class Novel(object):
@@ -185,31 +186,45 @@ def main():
     # novels = kakuyomu.get_novel_link("人外")
     #
 
-    aozora = Aozora()
-    # 安吾、乱歩、信夫、久作
-    authors = [1095, 1779, 933, 96]
-    novels = []
-    for author in authors:
-        novels += aozora.get_novel(author)
-
-    # データ挿入
-    for novel in novels:
-        db_connect["novel"].insert_one(vars(novel))
+    # aozora = Aozora()
+    # # 安吾、乱歩、信夫、久作
+    # authors = map(lambda x: x.aozora_num, AUTHORS)
+    # novels = []
+    # for author in authors:
+    #     novels += aozora.get_novel(author)
+    #
+    # # データ挿入
+    # for novel in novels:
+    #     db_connect["novel"].insert_one(vars(novel))
 
     c = db_connect.novel
+    # cursor = c.find()
+    # for novel in cursor:
+    #     _id = novel["_id"]
+    #     new_children = []
+    #     if novel["children"]:
+    #         for episode in novel["children"]:
+    #             episode["wakati_text"] = wakati(re.sub("\n", "", episode["body"]))
+    #             new_children.append(episode)
+    #
+    #         c.update({'_id': _id}, {'$set': {'children': new_children}})
+    #     else:
+    #         wakati_text = wakati(re.sub("\n", "", novel["body"]))
+    #         c.update({'_id': _id}, {'$set': {'wakati_text': wakati_text}})
+
+    # 空データを削除
+    cursor = c.find({"author": ""})
+    for novel in cursor:
+        _id = novel["_id"]
+        c.remove({"_id": _id})
+
     cursor = c.find()
     for novel in cursor:
         _id = novel["_id"]
-        new_children = []
-        if novel["children"]:
-            for episode in novel["children"]:
-                episode["wakati_text"] = wakati(re.sub("\n", "", episode["body"]))
-                new_children.append(episode)
-
-            c.update({'_id': _id}, {'$set': {'children': new_children}})
-        else:
-            wakati_text = wakati(re.sub("\n", "", novel["body"]))
-            c.update({'_id': _id}, {'$set': {'wakati_text': wakati_text}})
+        print(novel["author"])
+        print(AUTHOR_CLASS)
+        class_num = AUTHOR_CLASS[novel["author"]]
+        c.update({'_id': _id}, {'$set': {'label': class_num}})
 
 
 if __name__ == '__main__':
