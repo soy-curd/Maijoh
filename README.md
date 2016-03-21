@@ -11,6 +11,10 @@ novels = kakuyomu.get_novel_link("ほげ")
 
 ## setup(for Mac OS)
 
+### igo
+http://www.mwsoft.jp/programming/munou/igo_install.html
+を参考。
+
 ### tensorflow
 ```
 pip install --upgrade https://storage.googleapis.com/tensorflow/mac/tensorflow-0.6.0-py3-none-any.whl

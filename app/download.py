@@ -10,6 +10,7 @@ from urllib.parse import quote, urljoin
 import igo
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
+from constants import *
 
 
 class Novel(object):
@@ -153,22 +154,20 @@ class Aozora(NovelSite):
         soup = BeautifulSoup(text)
         title = soup.find('h1', {'class': 'title'}).text
         author = soup.find('h2', {'class': 'author'}).text
-        tag = soup.div
+        body = soup.find('div', {'class': 'main_text'})
 
         # ここでルビをreplaceする必要がある。
         try:
-            while soup.ruby:
-                tag.ruby.replace_with(tag.ruby.rb.string)
-            while soup.br:
+            while body.ruby:
+                body.ruby.replace_with(body.ruby.rb.string)
+            while body.br:
                 soup.br.decompose()
-            while soup.strong:
-                soup.strong.decompose()
+            while body.strong:
+                body.strong.decompose()
         except AttributeError:
             pass
 
-        _text = tag.text
-
-        return _text, title, author
+        return body.text, title, author
 
 
 def wakati(text):
@@ -187,31 +186,43 @@ def main():
     # novels = kakuyomu.get_novel_link("人外")
     #
 
-    aozora = Aozora()
-    # 安吾、乱歩、信夫、久作
-    authores = [1095, 1779, 933, 96]
-    novels = []
-    for author in authores:
-        novels += aozora.get_novel(author)
-
-    # データ挿入
-    for novel in novels:
-        db_connect["novel"].insert_one(vars(novel))
+    # aozora = Aozora()
+    # # 安吾、乱歩、信夫、久作
+    # authors = map(lambda x: x.aozora_num, AUTHORS)
+    # novels = []
+    # for author in authors:
+    #     novels += aozora.get_novel(author)
+    #
+    # # データ挿入
+    # for novel in novels:
+    #     db_connect["novel"].insert_one(vars(novel))
 
     c = db_connect.novel
+    # cursor = c.find()
+    # for novel in cursor:
+    #     _id = novel["_id"]
+    #     new_children = []
+    #     if novel["children"]:
+    #         for episode in novel["children"]:
+    #             episode["wakati_text"] = wakati(re.sub("\n", "", episode["body"]))
+    #             new_children.append(episode)
+    #
+    #         c.update({'_id': _id}, {'$set': {'children': new_children}})
+    #     else:
+    #         wakati_text = wakati(re.sub("\n", "", novel["body"]))
+    #         c.update({'_id': _id}, {'$set': {'wakati_text': wakati_text}})
+
+    # 空データを削除
+    cursor = c.find({"author": ""})
+    for novel in cursor:
+        _id = novel["_id"]
+        c.remove({"_id": _id})
+
     cursor = c.find()
     for novel in cursor:
         _id = novel["_id"]
-        new_children = []
-        if novel["children"]:
-            for episode in novel["children"]:
-                episode["wakati_text"] = wakati(re.sub("\n", "", episode["body"]))
-                new_children.append(episode)
-
-            c.update({'_id': _id}, {'$set': {'children': new_children}})
-        else:
-            wakati_text = wakati(re.sub("\n", "", novel["body"]))
-            c.update({'_id': _id}, {'$set': {'wakati_text': wakati_text}})
+        class_num = AUTHOR_CLASS[novel["author"]]
+        c.update({'_id': _id}, {'$set': {'label': class_num}})
 
 
 if __name__ == '__main__':

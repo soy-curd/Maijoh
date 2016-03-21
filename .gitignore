@@ -1,3 +1,7 @@
+bak/
+ipadic/
+.python-version
+
 # intelliJ
 *.idea
 *.iml
