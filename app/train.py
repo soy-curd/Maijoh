@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
-import analyze
+import random
+
 import numpy as np
 import tensorflow as tf
+
+import analyze
 from analyze import log
 from constants import *
-import random
 
 
 def cnn():
@@ -129,8 +131,8 @@ def cnn():
 
                 # TRAINING.
                 _, v1, v2, v3, v4 = sess.run(
-                    [train, loss, accuracy, loss_sum, accr_sum],
-                    feed_dict={input_x: mini_batch_x, input_y: mini_batch_y, keep: 0.5}
+                        [train, loss, accuracy, loss_sum, accr_sum],
+                        feed_dict={input_x: mini_batch_x, input_y: mini_batch_y, keep: 0.5}
                 )
                 log('%4dth mini batch complete. LOSS: %f, ACCR: %f' % (i + 1, v1, v2))
 
@@ -151,8 +153,8 @@ def cnn():
                     random_test_y = test_y[random_test_indice]
 
                     v1, v2, v3, v4 = sess.run(
-                        [loss, accuracy, t_loss_sum, t_accr_sum],
-                        feed_dict={input_x: random_test_x, input_y: random_test_y, keep: 1.0}
+                            [loss, accuracy, t_loss_sum, t_accr_sum],
+                            feed_dict={input_x: random_test_x, input_y: random_test_y, keep: 1.0}
                     )
                     log('Testing... LOSS: %f, ACCR: %f' % (v1, v2))
                     writer.add_summary(v3, current_step)
@@ -163,7 +165,59 @@ def cnn():
 
 
 def main():
-    cnn()
+    if not os.path.exists(CHECKPOINTS_DIR):
+        os.makedirs(CHECKPOINTS_DIR)
+
+    x, y, d = analyze.get_data()
+
+    # Split original data into two groups for training and testing.
+    data = list(zip(list(x), list(y)))
+    random.shuffle(data)
+    train_data = data[:NUM_TESTS]
+    test_data = data[NUM_TESTS:]
+    train_x, train_y = list(zip(*train_data))
+    test_x, test_y = list(zip(*test_data))
+    train_x, train_y, test_x, test_y = list(map(np.array, [train_x, train_y, test_x, test_y]))
+
+    # ロジスティック回帰してみる
+    width = len(test_x[0])  # 73334
+    ph_x = tf.placeholder(tf.float32, [None, width])
+    W = tf.Variable(tf.zeros([width, NUM_CLASSES]))
+    b = tf.Variable(tf.zeros([NUM_CLASSES]))
+    y = tf.nn.softmax(tf.matmul(ph_x, W) + b)
+
+    # 交差エントロピー
+    ph_y = tf.placeholder(tf.float32, [None, NUM_CLASSES])
+    cross_entropy = -tf.reduce_sum(ph_y * tf.log(y))
+
+    # 勾配降下法
+    train_step = tf.train.GradientDescentOptimizer(0.9).minimize(cross_entropy)
+
+    init = tf.initialize_all_variables()
+    sess = tf.Session()
+    sess.run(init)
+    for i in range(10):
+        log("Start {0} epoch.".format(i))
+        sess.run(train_step, feed_dict={ph_x: train_x, ph_y: train_y})
+
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(ph_y, 1))
+
+    # 精度の計算
+    # [True, False, True] cast -> [1. , 0. , 1. ] ave-> 0.66
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+
+    # 精度の実行と表示
+    # テストデータの画像とラベルで精度を確認する
+    # ソフトマックス回帰によってWとbの値が計算されているので、xを入力することでyが計算できる
+    print("精度")
+    print(sess.run(accuracy, feed_dict={ph_x: test_x, ph_y: test_y}))
+    print(sess.run(y, feed_dict={ph_x: test_x}))
+    print(sess.run(W))
+    print(sess.run(b))
+
+    import pdb
+    pdb.set_trace()
+    sess.close()
 
 
 if __name__ == '__main__':

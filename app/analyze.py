@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from constants import *
-import numpy as np
-from pymongo import MongoClient
-from collections import Counter
 import itertools
 import os
-import tensorflow as tf
-import random
-from datetime import datetime
 import sys
+from collections import Counter
+from datetime import datetime
+
+import numpy as np
+import tensorflow as tf
+from pymongo import MongoClient
+
+from constants import *
 
 if not os.path.exists(CHECKPOINTS_DIR):
     os.makedirs(CHECKPOINTS_DIR)
@@ -55,7 +56,7 @@ def make_data():
     dictionaries = [c[0] for c in ctr.most_common()]
     dictionaries_inv = {c: i for i, c in enumerate(dictionaries)}
 
-    if novels[0]["vector"]:
+    if "vector" in novels[0]:
         return [novel["vector"] for novel in novels], labels, dictionaries
 
     # 各テキスト毎の単語ベクトル
@@ -66,7 +67,6 @@ def make_data():
         _id = novel["_id"]
         vector = [dictionaries_inv[word] for word in content]
         c.update({'_id': _id}, {'$set': {'vector': vector}})
-    print(data, labels, dictionaries)
     return data, labels, dictionaries
 
 
