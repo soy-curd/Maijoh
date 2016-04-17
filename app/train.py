@@ -164,6 +164,140 @@ def cnn():
         saver.save(sess, CHECKPOINTS_DIR + '/model-last')
 
 
+def nn():
+    if not os.path.exists(CHECKPOINTS_DIR):
+        os.makedirs(CHECKPOINTS_DIR)
+
+    x, y, dictionary = analyze.get_data()
+    # x = np.resize(x, (x.shape[0], 100))
+    # x = np.resize(x, (x.shape[0], 100))
+
+    # y = np.resize(y, (y.shape[0], 2)).astype(np.int32)
+
+    # 桁あふれ回避のためベクトルサイズを縮小
+
+    # _x, _y, _dictionary = analyze.get_data()
+    # x = np.array([
+    #     [0, 1, 7],
+    #     [2, 1, 0],
+    #     [7, 2, 3],
+    #     [0, 1, 7],
+    #     [1, 1, 1],
+    #     [0, 1, 2],
+    #     [2, 2, 7],
+    #     [2, 1, 7],
+    #     [2, 1, 3],
+    #     [0, 1, 7],
+    #     [0, 1, 7],
+    #     [3, 6, 5],
+    #     [4, 5, 0],
+    #     [4, 6, 4],
+    #     [4, 1, 4],
+    #     [0, 6, 3],
+    #     [0, 3, 6],
+    #     [4, 5, 4],
+    #     [4, 5, 3],
+    #     [2, 5, 4],
+    # ])
+    #
+    # y = np.array([
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [1, 0],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    #     [0, 1],
+    # ])
+    # dictionary = np.array([
+    #    "hgoe", "python", "perl", "java", "c", "cpp", "scala", "ruby"
+    # ])
+    # NUM_TESTS = 10
+    # NUM_CLASSES = 2
+
+
+    # Split original data into two groups for training and testing.
+    data = list(zip(list(x), list(y)))
+    random.shuffle(data)
+    train_data = data[:NUM_TESTS]
+    test_data = data[NUM_TESTS:]
+    train_x, train_y = list(zip(*train_data))
+    test_x, test_y = list(zip(*test_data))
+    train_x, train_y, test_x, test_y = list(map(np.array, [train_x, train_y, test_x, test_y]))
+
+    width = len(test_x[0])  # 73334
+    ph_x = tf.placeholder(tf.float32, [None, width])
+
+    # ロジスティック回帰してみる
+    # [Dimension(73334), Dimension(4)]
+    W = tf.Variable(tf.zeros([width, NUM_CLASSES]))
+    W = tf.Variable(tf.random_uniform([width, NUM_CLASSES], -width, width, dtype=tf.float64))
+    W = tf.Variable(tf.random_uniform([width, NUM_CLASSES], -1.0, 1.0))
+
+    b = tf.Variable(tf.zeros([NUM_CLASSES]))
+
+    logged_x = tf.sigmoid(ph_x)  # softmaxのために入力値をlogで小さくする
+    e_dot_w = tf.matmul(logged_x, W)  # [Dimension(None), Dimension(4)]
+    predicted_y = tf.nn.softmax(e_dot_w + b)  # [Dimension(None), Dimension(4)]
+
+    # 交差エントロピー
+    ph_y = tf.placeholder(tf.float32, [None, NUM_CLASSES])
+    cross_entropy = -tf.reduce_sum(ph_y * tf.log(predicted_y + 1e-50))
+
+    e_dot_w = tf.matmul(ph_x, W)  # [Dimension(None), Dimension(4)]
+    x_entropy = tf.nn.softmax_cross_entropy_with_logits(e_dot_w + b, ph_y)  # [Dimension(None), Dimension(4)]
+    cross_entropy = tf.reduce_mean(x_entropy)
+
+    # AdamOptimizer
+    learning_rate = 0.001
+    optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cross_entropy)
+
+    init = tf.initialize_all_variables()
+
+    isess = tf.InteractiveSession
+
+    sess = tf.Session()
+
+    correct_prediction = tf.equal(tf.argmax(predicted_y, 1), tf.argmax(ph_y, 1))
+
+    # 精度の計算
+    # [True, False, True] cast -> [1. , 0. , 1. ] ave-> 0.66
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+
+    sess.run(init)
+    for i in range(10):
+        # print(sess.run(W))
+        # print(sess.run(b))
+
+        # log("Start {0} epoch.".format(i))
+        sess.run(optimizer, feed_dict={ph_x: train_x, ph_y: train_y})
+        # print(sess.run(accuracy, feed_dict={ph_x: test_x, ph_y: test_y}))
+
+    # 精度の実行と表示
+    # テストデータの画像とラベルで精度を確認する
+    # ソフトマックス回帰によってWとbの値が計算されているので、xを入力することでyが計算できる
+    print("精度")
+    print(sess.run(accuracy, feed_dict={ph_x: test_x, ph_y: test_y}))
+    print(test_y)
+    print(sess.run(predicted_y, feed_dict={ph_x: test_x}))
+
+    sess.close()
+
+
 def main():
     if not os.path.exists(CHECKPOINTS_DIR):
         os.makedirs(CHECKPOINTS_DIR)
@@ -179,26 +313,72 @@ def main():
     test_x, test_y = list(zip(*test_data))
     train_x, train_y, test_x, test_y = list(map(np.array, [train_x, train_y, test_x, test_y]))
 
-    # ロジスティック回帰してみる
     width = len(test_x[0])  # 73334
     ph_x = tf.placeholder(tf.float32, [None, width])
+    ph_y = tf.placeholder(tf.int32, shape=[None, NUM_CLASSES])
+
+    # 単語の埋め込み表現の作成
+    with tf.name_scope('embedding'):
+        w = tf.Variable(tf.random_uniform([len(d), EMBEDDING_SIZE], -1.0, 1.0), name='weight')
+        int_x = tf.to_int32(ph_x)
+        e = tf.nn.embedding_lookup(w, int_x)
+        # ex = tf.expand_dims(e, -1)  # 次元拡張
+
+    # nce_weights = tf.Variable(
+    #         tf.truncated_normal([len(d), EMBEDDING_SIZE],
+    #                             stddev=1.0 / math.sqrt(EMBEDDING_SIZE)))
+    # nce_biases = tf.Variable(tf.zeros([len(d)]))
+    #
+    # # 損失関数
+    # num_sampled = len(int_x)
+    # loss = tf.reduce_mean(
+    #     tf.nn.nce_loss(nce_weights, nce_biases, e, ph_y,
+    #                    num_sampled, len(d))
+    # )
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=1.0).minimize(loss)
+
+    # 次元削減
+    # http://stackoverflow.com/questions/35295191/tensorflow-embedding-lookup
+    # [Dimension(None), Dimension(128)]
+    embedding_aggregated = tf.reduce_sum(e, [0])
+
+    # ロジスティック回帰してみる
+    # [Dimension(73334), Dimension(4)]
     W = tf.Variable(tf.zeros([width, NUM_CLASSES]))
+
     b = tf.Variable(tf.zeros([NUM_CLASSES]))
-    y = tf.nn.softmax(tf.matmul(ph_x, W) + b)
+
+    # interactive session
+    isess = tf.InteractiveSession
+    s = W.get_shape()
+    dims = s.dims
+
+    s2 = embedding_aggregated.get_shape()
+    dims2 = s2.dims
+
+    # 次元が合わない...
+    # e_dot_w = tf.matmul(embedding_aggregated, W, transpose_a=True)
+
+    e_dot_w = tf.matmul(ph_x, W)  # [Dimension(None), Dimension(4)]
+    y = tf.nn.softmax(e_dot_w + b)  # [Dimension(None), Dimension(4)]
 
     # 交差エントロピー
     ph_y = tf.placeholder(tf.float32, [None, NUM_CLASSES])
     cross_entropy = -tf.reduce_sum(ph_y * tf.log(y))
 
     # 勾配降下法
-    train_step = tf.train.GradientDescentOptimizer(0.9).minimize(cross_entropy)
+    optimizer = tf.train.GradientDescentOptimizer(0.9).minimize(cross_entropy)
 
     init = tf.initialize_all_variables()
+
+    import pdb
+    pdb.set_trace()
+
     sess = tf.Session()
     sess.run(init)
     for i in range(10):
         log("Start {0} epoch.".format(i))
-        sess.run(train_step, feed_dict={ph_x: train_x, ph_y: train_y})
+        sess.run(optimizer, feed_dict={ph_x: train_x, ph_y: train_y})
 
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(ph_y, 1))
 
@@ -215,10 +395,9 @@ def main():
     print(sess.run(W))
     print(sess.run(b))
 
-    import pdb
-    pdb.set_trace()
     sess.close()
 
 
 if __name__ == '__main__':
-    main()
+    nn()
+    # main()
