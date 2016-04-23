@@ -177,6 +177,30 @@ def wakati(text):
     return t.wakati(text)
 
 
+def make_sentence():
+    stop_words = ["。"]
+
+    mongo_client = MongoClient('localhost:27017')
+    db_connect = mongo_client["novel"]
+    c = db_connect.novel
+    cursor = c.find()
+    novels = (novel for novel in cursor)
+    contents = ((novel["_id"], novel["wakati_text"]) for novel in novels)
+
+    # "。"で区切る
+    for _id, words in contents:
+        sentences = []
+        sentence = []
+        for word in words:
+            if word in stop_words:
+                sentences.append(sentence)
+                sentence = []
+            else:
+                sentence.append(word)
+
+        c.update({'_id': _id}, {'$set': {'sentences': sentences}})
+
+
 def main():
     # MongoDB接続
     mongo_client = MongoClient('localhost:27017')

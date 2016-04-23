@@ -70,6 +70,32 @@ def make_data():
     return data, labels, dictionaries
 
 
+def make_sentence_vector():
+    stop_words = [3]  # "。"
+
+    # MongoDB接続
+    mongo_client = MongoClient('localhost:27017')
+    # データベース選択
+    db_connect = mongo_client["novel"]
+    c = db_connect.novel
+    cursor = c.find()
+    novels = [novel for novel in cursor]
+    contents = [(novel["_id"], novel["vector"]) for novel in novels]
+
+    # "。"で区切る
+    for _id, words in contents:
+        sentences = []
+        sentence = []
+        for word in words:
+            if word in stop_words:
+                sentences.append(sentence)
+                sentence = []
+            else:
+                sentence.append(word)
+
+        c.update({'_id': _id}, {'$set': {'sentence_vectors': sentences}})
+
+
 def get_data():
     if os.path.exists(DATA_FILE) and os.path.exists(LABEL_FILE) and os.path.exists(DICTIONARY_FILE):
         data = np.load(DATA_FILE)
