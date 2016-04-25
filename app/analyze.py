@@ -26,11 +26,11 @@ def one_hot_vec(index):
     return v
 
 
-def padding(contents, max_word_count):
+def padding(contents, max_word_count, padder='<PAD/>'):
     padded_contents = []
     for i in range(len(contents)):
         content = contents[i]
-        padded_contents.append(content + ['<PAD/>'] * (max_word_count - len(content)))
+        padded_contents.append(content + [padder] * (max_word_count - len(content)))
 
     return padded_contents
 
@@ -83,17 +83,28 @@ def make_sentence_vector():
     contents = [(novel["_id"], novel["vector"]) for novel in novels]
 
     # "。"で区切る
+    max_size = 0
     for _id, words in contents:
         sentences = []
         sentence = []
         for word in words:
             if word in stop_words:
                 sentences.append(sentence)
+                if len(sentence) > max_size:
+                    max_size = len(sentence)
                 sentence = []
             else:
                 sentence.append(word)
 
         c.update({'_id': _id}, {'$set': {'sentence_vectors': sentences}})
+
+    # 長さを揃えるために0埋めする
+    contents = [(novel["_id"], novel["sentence_vectors"]) for novel in novels]
+
+    padder = 0
+    for _id, sentences in contents:
+        _sentences = padding(sentences, max_size, padder)
+        c.update({'_id': _id}, {'$set': {'sentence_vectors': _sentences}})
 
 
 def get_data():
