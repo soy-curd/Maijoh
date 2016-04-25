@@ -8,7 +8,6 @@ from collections import Counter
 from datetime import datetime
 
 import numpy as np
-import tensorflow as tf
 from pymongo import MongoClient
 
 from constants import *
@@ -35,7 +34,7 @@ def padding(contents, max_word_count, padder='<PAD/>'):
     return padded_contents
 
 
-def make_data():
+def make_data(with_sentence=True):
     # MongoDB接続
     mongo_client = MongoClient('localhost:27017')
     # データベース選択
@@ -56,9 +55,6 @@ def make_data():
     dictionaries = [c[0] for c in ctr.most_common()]
     dictionaries_inv = {c: i for i, c in enumerate(dictionaries)}
 
-    if "vector" in novels[0]:
-        return [novel["vector"] for novel in novels], labels, dictionaries
-
     # 各テキスト毎の単語ベクトル
     # [[ 3, 51, 34, 9, ...], ...]
     data = [[dictionaries_inv[word] for word in content] for content in contents]
@@ -67,6 +63,10 @@ def make_data():
         _id = novel["_id"]
         vector = [dictionaries_inv[word] for word in content]
         c.update({'_id': _id}, {'$set': {'vector': vector}})
+
+    if with_sentence:
+        data, labels = make_sentence_vector()
+
     return data, labels, dictionaries
 
 
@@ -84,10 +84,13 @@ def make_sentence_vector():
 
     # "。"で区切る
     max_size = 0
+    max_word = 0
     for _id, words in contents:
         sentences = []
         sentence = []
         for word in words:
+            if word > max_word:
+                max_word = word
             if word in stop_words:
                 sentences.append(sentence)
                 if len(sentence) > max_size:
@@ -99,12 +102,19 @@ def make_sentence_vector():
         c.update({'_id': _id}, {'$set': {'sentence_vectors': sentences}})
 
     # 長さを揃えるために0埋めする
-    contents = [(novel["_id"], novel["sentence_vectors"]) for novel in novels]
+    contents = [(novel["_id"], novel["sentence_vectors"], novel["label"]) for novel in novels]
 
     padder = 0
-    for _id, sentences in contents:
+    data = []
+    labels = []
+    for _id, sentences, label in contents:
         _sentences = padding(sentences, max_size, padder)
+        data = data + _sentences
+        _label = one_hot_vec(label)
+        labels = labels + [_label for _ in range(len(_sentences))]
         c.update({'_id': _id}, {'$set': {'sentence_vectors': _sentences}})
+
+    return data, labels
 
 
 def get_data():
@@ -132,31 +142,7 @@ def log(content):
 
 
 def main():
-    # x, y, d = get_data()
-    def x2_plus_b(x, b):
-        _x = tf.constant(x)
-        _b = tf.constant(b)
-        result = tf.square(_x)
-        result = tf.add(result, _b)
-        return result
-
-    with tf.Session() as sess:
-        result = sess.run([x2_plus_b(2, 3)])
-        print(result)
-
-    p_x = tf.placeholder(tf.float32)
-    p_b = tf.placeholder(tf.float32)
-    p_x2_plus_b = tf.add(tf.square(p_x), p_b)
-
-    with tf.Session() as sess:
-        result = sess.run([p_x2_plus_b], feed_dict={p_x: [2], p_b: [3]})
-        print(result)
-
-    """
-    saver.restore(sess, "checkpoints/model-last")
-    sess.run([predict_y], feed_dict={x_ph: random_test_x[0]})
-    で行ける気がするが、型が合わない。謎。
-    """
+    x, y, d = get_data()
 
 
 if __name__ == '__main__':

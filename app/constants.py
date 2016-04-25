@@ -20,7 +20,7 @@ for i, author in enumerate(AUTHORS):
 
 AUTHOR_CLASS = {author.name: author.class_num for author in AUTHORS}
 
-NUM_TESTS = 20
+NUM_TESTS = 2000
 NUM_CLASSES = len(AUTHORS)
 NUM_EPOCHS = 10
 NUM_MINI_BATCH = 64
