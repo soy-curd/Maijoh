@@ -122,6 +122,9 @@ def cnn():
             # Split training data into mini batch for SGD.
             log('Start %dth epoch.' % (epoch + 1))
             for i in range(batch_count):
+                if i == MAX_STEP:
+                    break
+
                 # Take mini batch from training data.
                 mini_batch_x = []
                 mini_batch_y = []
@@ -162,6 +165,67 @@ def cnn():
 
         # Save the model before the program is finished.
         saver.save(sess, CHECKPOINTS_DIR + '/model-last')
+
+
+def nn():
+    # ここで、
+    # x = [1,4,3,1,0,0,0,0,...]:  <- 大きさは最大のsentence長
+    # y = [1, 0, 0, 0]:  <- 大きさがクラス数
+    # dictionary: 語彙の辞書
+    x, y, dictionary = analyze.get_data()
+
+    # 訓練データとテストデータに分ける
+    data = list(zip(list(x), list(y)))
+    random.shuffle(data)
+    train_data = data[:NUM_TESTS]
+    test_data = data[NUM_TESTS:]
+    train_x, train_y = zip(*train_data)
+    test_x, test_y = zip(*test_data)
+    train_x, train_y, test_x, test_y = map(np.array, [train_x, train_y, test_x, test_y])
+
+    width = len(test_x[0])
+    ph_x = tf.placeholder(tf.float32, [None, width])
+    ph_y = tf.placeholder(tf.float32, [None, NUM_CLASSES])
+
+    # 初期化
+    output_W = tf.Variable(tf.random_uniform([width, NUM_CLASSES], -1.0, 1.0))
+    output_b = tf.Variable(tf.zeros([NUM_CLASSES]))
+
+    # 推定値の計算
+    predicted_y = tf.nn.softmax(tf.matmul(ph_x, output_W) + output_b)
+
+    # 交差エントロピーの計算
+    x_entropy = tf.nn.softmax_cross_entropy_with_logits(predicted_y, ph_y)  # [Dimension(None), Dimension(4)]
+    cross_entropy = tf.reduce_mean(x_entropy)
+
+    # 急降下勾配法
+    learning_rate = 0.1
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cross_entropy)
+
+    # 精度の計算
+    correct_prediction = tf.equal(tf.argmax(predicted_y, 1), tf.argmax(ph_y, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+
+    num_epochs = 1000
+    batch_size = 100
+
+    init = tf.initialize_all_variables()
+    sess = tf.Session()
+    sess.run(init)
+    for i in range(num_epochs):
+        log("Start {0} epoch.".format(i))
+        random.shuffle(train_data)
+        _train_x, _train_y = zip(*train_data[: batch_size])
+        sess.run(optimizer, feed_dict={ph_x: _train_x, ph_y: _train_y})
+        print(sess.run(accuracy, feed_dict={ph_x: test_x, ph_y: test_y}))
+
+    # 精度の実行と表示
+    # テストデータとラベルで精度を確認する
+    # ソフトマックス回帰によってWとbの値が計算されているので、xを入力することでyが計算できる
+    print("精度")
+    print(sess.run(accuracy, feed_dict={ph_x: test_x, ph_y: test_y}))
+
+    sess.close()
 
 
 if __name__ == '__main__':
