@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import functools
 import os
 import re
 import time
@@ -201,7 +202,7 @@ def make_sentence():
         c.update({'_id': _id}, {'$set': {'sentences': sentences}})
 
 
-def main():
+def save_data():
     # MongoDB接続
     mongo_client = MongoClient('localhost:27017')
     # データベース選択
@@ -211,12 +212,13 @@ def main():
     # novels = kakuyomu.get_novel_link("人外")
     #
 
-    aozora = Aozora()
-    # 安吾、乱歩、信夫、久作
-    authors = map(lambda x: x.aozora_num, AUTHORS)
-    novels = []
-    for author in authors:
-        novels += aozora.get_novel(author)
+    # aozora = Aozora()
+    # # 安吾、乱歩、信夫、久作
+    # authors = map(lambda x: x.aozora_num, AUTHORS)
+    # novels = []
+    # for author in authors:
+    #     novels += aozora.get_novel(author)
+    novels = [get_local_data()]
 
     # データ挿入
     for novel in novels:
@@ -249,6 +251,23 @@ def main():
         class_num = AUTHOR_CLASS[novel["author"]]
         c.update({'_id': _id}, {'$set': {'label': class_num}})
 
+
+def get_local_data():
+    pattern = r"\d\x20"
+    rep = re.compile(pattern)
+    with open("text/sekai.txt", "r") as f:
+        texts = f.readlines()
+
+    # ページ数が含まれている行を削除
+    texts = filter(lambda text: not rep.search(text), texts)
+    texts = map(lambda text: text.replace(" ", "").replace(":", "").replace(" l", "ー").replace(" 1", "ー"), texts)
+    novel = functools.reduce(lambda a, t: a + t, texts, "")
+    return Novel("世界は密室でできている", "舞城王太郎", novel, "")
+
+
+def main():
+    save_data()
+    make_sentence()
 
 if __name__ == '__main__':
     main()

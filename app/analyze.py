@@ -21,6 +21,8 @@ if not os.path.exists(DATA_DIR):
 
 def one_hot_vec(index):
     v = np.zeros(NUM_CLASSES)
+    if index > NUM_CLASSES:
+        return []
     v[index] = 1
     return v
 
@@ -109,10 +111,11 @@ def make_sentence_vector():
     labels = []
     for _id, sentences, label in contents:
         _sentences = padding(sentences, max_size, padder)
-        data = data + _sentences
-        _label = one_hot_vec(label)
-        labels = labels + [_label for _ in range(len(_sentences))]
         c.update({'_id': _id}, {'$set': {'sentence_vectors': _sentences}})
+        if label != 100:  # 舞城のデータは訓練に用いない
+            data = data + _sentences
+            _label = one_hot_vec(label)
+            labels = labels + [_label for _ in range(len(_sentences))]
 
     return data, labels
 
