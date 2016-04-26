@@ -11,7 +11,7 @@ from analyze import log
 from constants import *
 
 
-def cnn():
+def cnn(restore=False):
     """
     https://github.com/tkengo/tf/tree/master/cnn_text_classification
     を改変。
@@ -100,6 +100,26 @@ def cnn():
     # ----------------------------------------------------------
     # Start TensorFlow Session.
     # ----------------------------------------------------------
+    if restore:
+        isess = tf.InteractiveSession()
+        isess.run(tf.initialize_all_variables())
+        saver.restore(isess, CHECKPOINTS_DIR + '/model-last')
+        sentences = np.array(analyze.get_maijoh())
+
+        random_test_indice = np.random.permutation(100)
+
+        v1 = isess.run([predict_y], feed_dict={input_x: sentences[random_test_indice],
+                                               input_y: np.array(
+                                                       [[0, 0, 0, 0] for _ in range(len(random_test_indice))]),
+                                               keep: 0.5})
+        log('predicted: {}'.format(v1))
+        result = np.sum(v1, axis=0) / len(v1)
+        result = np.sum(result, axis=0) / len(result)
+        log('result: {}'.format(result))
+
+        isess.close()
+        return
+
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
         writer = tf.train.SummaryWriter(SUMMARY_LOG_DIR, sess.graph_def)
@@ -229,4 +249,4 @@ def nn():
 
 
 if __name__ == '__main__':
-    cnn()
+    cnn(restore=True)

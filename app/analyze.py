@@ -138,6 +138,16 @@ def get_data():
     return data, labels, dictionaries
 
 
+def get_maijoh():
+    # MongoDB接続
+    mongo_client = MongoClient('localhost:27017')
+    # データベース選択
+    db_connect = mongo_client["novel"]
+    c = db_connect.novel
+    cursor = c.find({"title": "世界は密室でできている"})
+    return list(cursor)[0]['sentence_vectors']
+
+
 def log(content):
     time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     print(time + ': ' + content)
